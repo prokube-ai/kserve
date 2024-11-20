@@ -33,7 +33,7 @@ from vllm.entrypoints.logger import RequestLogger
 from vllm.inputs.parse import parse_and_batch_prompt
 from vllm.lora.request import LoRARequest
 from vllm.prompt_adapter.request import PromptAdapterRequest
-from vllm.sampling_params import SamplingParams
+from vllm.sampling_params import SamplingParams, GuidedDecodingParams
 from vllm.utils import random_uuid
 
 from vllm.outputs import RequestOutput
@@ -77,6 +77,9 @@ def to_sampling_params(request: CreateCompletionRequest, default_max_tokens: int
 
         logits_processors = [logit_bias_logits_processor]
 
+    # vllm API extra guided params: https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html#extra-parameters-for-completions-api
+    guided_choice = request.guided_choice
+
     return SamplingParams(
         n=request.n,
         best_of=request.best_of,
@@ -90,6 +93,8 @@ def to_sampling_params(request: CreateCompletionRequest, default_max_tokens: int
         max_tokens=max_tokens if not echo_without_generation else 1,
         logits_processors=logits_processors,
         prompt_logprobs=request.logprobs if request.echo else None,
+        # https://github.com/vllm-project/vllm/blob/772a66732d0ff58a43dbd1ae79c0d165659aa96d/tests/entrypoints/llm/test_guided_generate.py#L80
+        guided_decoding=GuidedDecodingParams(choice=guided_choice),
     )
 
 

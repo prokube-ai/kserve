@@ -130,6 +130,14 @@ class CreateCompletionRequest(BaseModel):
         examples=["user-1234"],
     )
 
+    # vllm: begin-completion-extra-params
+    # https://github.com/vllm-project/vllm/blob/772a66732d0ff58a43dbd1ae79c0d165659aa96d/vllm/entrypoints/openai/protocol.py#L561
+    guided_choice: Optional[List[str]] = Field(
+        default=None,
+        description=(
+            "If specified, the output will be exactly one of the choices."),
+    )
+
 
 class Logprobs(BaseModel):
     text_offset: Optional[List[int]] = None
@@ -2717,6 +2725,14 @@ class CreateChatCompletionRequest(BaseModel):
         default=None,
         description=("Additional kwargs to pass to the template renderer. "
                      "Will be accessible by the chat template."),
+    )
+
+    # vllm: begin-chat-completion-extra-params
+    # https://github.com/vllm-project/vllm/blob/772a66732d0ff58a43dbd1ae79c0d165659aa96d/vllm/entrypoints/openai/protocol.py#L249
+    guided_choice: Optional[List[str]] = Field(
+        default=None,
+        description=(
+            "If specified, the output will be exactly one of the choices."),
     )
 
 
