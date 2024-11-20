@@ -82,6 +82,7 @@ class OpenAIChatAdapterModel(OpenAIModel):
             top_p=params.top_p,
             user=params.user,
             logprobs=params.top_logprobs,
+            guided_choice=params.guided_choice,
         )
 
     @classmethod
