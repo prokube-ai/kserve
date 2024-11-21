@@ -54,6 +54,13 @@ def infer_vllm_supported_from_model_architecture(
 def maybe_add_vllm_cli_parser(parser: ArgumentParser) -> ArgumentParser:
     if not _vllm:
         return parser
+
+    #remove the `--task` argument from the parser if it exists
+    for action in parser._actions:
+        if "--task" in action.option_strings:
+            parser._handle_conflict_resolve(None, [("--task", action)])
+            break
+
     return AsyncEngineArgs.add_cli_args(parser)
 
 
