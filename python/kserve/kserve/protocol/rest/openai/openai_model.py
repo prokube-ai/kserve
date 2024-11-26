@@ -13,10 +13,10 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Any, AsyncIterator, Callable, Dict, Optional, Union
+from typing import Any, AsyncIterator, Callable, Dict, Optional, Union, List
 import inspect
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from kserve.protocol.rest.openai.types import (
     ChatCompletion,
@@ -34,18 +34,88 @@ class ChatPrompt(BaseModel):
     prompt: str
 
 
+class VLLMCreateCompletionRequest(BaseModel):
+    guided_json: Optional[Union[str, dict, BaseModel]] = Field(
+        default=None,
+        description="If specified, the output will follow the JSON schema.",
+    )
+    guided_regex: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, the output will follow the regex pattern."),
+    )
+    guided_choice: Optional[List[str]] = Field(
+        default=None,
+        description=(
+            "If specified, the output will be exactly one of the choices."),
+    )
+    guided_grammar: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, the output will follow the context free grammar."),
+    )
+    guided_decoding_backend: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, will override the default guided decoding backend "
+            "of the server for this specific request. If set, must be one of "
+            "'outlines' / 'lm-format-enforcer'"))
+    guided_whitespace_pattern: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, will override the default whitespace pattern "
+            "for guided json decoding."))
+
+
+class VLLMCreateChatCompletionRequest(BaseModel):
+    guided_json: Optional[Union[str, dict, BaseModel]] = Field(
+        default=None,
+        description=("If specified, the output will follow the JSON schema."),
+    )
+    guided_regex: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, the output will follow the regex pattern."),
+    )
+    guided_choice: Optional[List[str]] = Field(
+        default=None,
+        description=(
+            "If specified, the output will be exactly one of the choices."),
+    )
+    guided_grammar: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, the output will follow the context free grammar."),
+    )
+    guided_decoding_backend: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, will override the default guided decoding backend "
+            "of the server for this specific request. If set, must be either "
+            "'outlines' / 'lm-format-enforcer'"))
+    guided_whitespace_pattern: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, will override the default whitespace pattern "
+            "for guided json decoding."))
+
+
 class BaseCompletionRequest(BaseModel):
     request_id: Optional[str] = None
     context: Optional[Dict[str, Any]] = None  # headers can go in here
     params: Union[CreateCompletionRequest, CreateChatCompletionRequest]
-
+    vllm_specific_params: Optional[
+        Union[VLLMCreateCompletionRequest, VLLMCreateChatCompletionRequest]
+    ] = None
 
 class CompletionRequest(BaseCompletionRequest):
     params: CreateCompletionRequest
+    vllm_specific_params: Optional[VLLMCreateCompletionRequest] = None
 
 
 class ChatCompletionRequest(BaseCompletionRequest):
     params: CreateChatCompletionRequest
+    vllm_specific_params: Optional[VLLMCreateChatCompletionRequest] = None
 
 
 class OpenAIModel(BaseKServeModel):
