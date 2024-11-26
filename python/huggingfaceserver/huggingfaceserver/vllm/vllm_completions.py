@@ -56,8 +56,11 @@ from kserve.protocol.rest.openai.errors import OpenAIError, create_error_respons
 from kserve.protocol.rest.openai import ChatCompletionRequestMessage, CompletionRequest
 
 
-def to_sampling_params(request: CreateCompletionRequest, default_max_tokens: int):
+def to_sampling_params(completion_request: CompletionRequest, default_max_tokens: int):
     # Based on the same fix as https://github.com/vllm-project/vllm/pull/6954
+    request = completion_request.params
+    request_vllm_specific = completion_request.vllm_specific_params
+
     max_tokens = request.max_tokens
     if max_tokens is None:
         max_tokens = default_max_tokens
@@ -77,6 +80,16 @@ def to_sampling_params(request: CreateCompletionRequest, default_max_tokens: int
 
         logits_processors = [logit_bias_logits_processor]
 
+    # vllm API extra guided params: https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html#extra-parameters-for-completions-api
+    guided_decoding=GuidedDecodingParams(
+        json=request_vllm_specific.guided_json,
+        regex=request_vllm_specific.guided_regex,
+        choice=request_vllm_specific.guided_choice,
+        grammar=request_vllm_specific.guided_grammar,
+        backend=request_vllm_specific.guided_decoding_backend,
+        whitespace_pattern=request_vllm_specific.guided_whitespace_pattern,
+    )
+
     return SamplingParams(
         n=request.n,
         best_of=request.best_of,
@@ -90,6 +103,8 @@ def to_sampling_params(request: CreateCompletionRequest, default_max_tokens: int
         max_tokens=max_tokens if not echo_without_generation else 1,
         logits_processors=logits_processors,
         prompt_logprobs=request.logprobs if request.echo else None,
+        # https://github.com/vllm-project/vllm/blob/772a66732d0ff58a43dbd1ae79c0d165659aa96d/tests/entrypoints/llm/test_guided_generate.py#L80
+        guided_decoding=guided_decoding,
     )
 
 
@@ -154,7 +169,7 @@ class OpenAIServingCompletion:
 
             for i, prompt_inputs in enumerate(prompts):
                 sampling_params = to_sampling_params(
-                    request,
+                    completion_request,  # preserve extra params from CompletionRequest
                     default_max_tokens=self.max_model_len - len(prompt_inputs[0]),
                 )
                 self._log_inputs(request_id, prompt_inputs, sampling_params)
