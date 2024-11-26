@@ -23,6 +23,7 @@ from kserve.protocol.rest.openai.types import (
     ChatCompletionRequestMessage,
     ChatCompletionResponseMessage,
     ChatCompletionTokenLogprob,
+    ChatCompletionTool,
     ChoiceDelta,
     ChunkChoice,
     Completion,
@@ -40,6 +41,8 @@ from .openai_model import (
     CompletionRequest,
     ChatCompletionRequest,
     AsyncMappingIterator,
+    VLLMCreateCompletionRequest,
+    VLLMCreateChatCompletionRequest
 )
 
 
@@ -56,6 +59,7 @@ class OpenAIChatAdapterModel(OpenAIModel):
         self,
         messages: Iterable[ChatCompletionRequestMessage],
         chat_template: Optional[str] = None,
+        tools: Optional[list[ChatCompletionTool]] = None,
     ) -> ChatPrompt:
         """
         Given a list of chat completion messages, convert them to a prompt.
@@ -82,6 +86,24 @@ class OpenAIChatAdapterModel(OpenAIModel):
             top_p=params.top_p,
             user=params.user,
             logprobs=params.top_logprobs,
+        )
+
+    @classmethod
+    def vllm_chat_completion_params_to_completion_params(
+        cls, params: Optional[VLLMCreateChatCompletionRequest] = None
+    ) -> Optional[VLLMCreateCompletionRequest]:
+        """Currently does nothing as the parameter set is the same for
+        both classes"""
+        if params is None:
+            return None
+
+        return VLLMCreateCompletionRequest(
+            guided_json=params.guided_json,
+            guided_regex=params.guided_regex,
+            guided_choice=params.guided_choice,
+            guided_grammar=params.guided_grammar,
+            guided_decoding_backend=params.guided_decoding_backend,
+            guided_whitespace_pattern=params.guided_whitespace_pattern,
         )
 
     @classmethod
@@ -211,10 +233,16 @@ class OpenAIChatAdapterModel(OpenAIModel):
         completion_params = self.chat_completion_params_to_completion_params(
             params, chat_prompt.prompt
         )
+        # Added for consistency, currently doesn't require an interface
+        # Since the extra params are the same for chat and completion
+        vllm_completion_params = self.vllm_chat_completion_params_to_completion_params(
+            request.vllm_specific_params
+        )
 
         completion_request = CompletionRequest(
             request_id=request.request_id,
             params=completion_params,
+            vllm_specific_params=vllm_completion_params,
             context=request.context,
         )
 
